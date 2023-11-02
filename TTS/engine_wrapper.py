@@ -67,38 +67,28 @@ class TTSEngine:
         self.call_tts("title", process_text(self.reddit_object["thread_title"]))
         # processed_text = ##self.reddit_object["thread_post"] != ""
         idx = None
+        counter = 0
 
-        if settings.config["settings"]["storymode"]:
-            if settings.config["settings"]["storymodemethod"] == 0:
-                if len(self.reddit_object["thread_post"]) > self.tts_module.max_chars:
-                    self.split_post(self.reddit_object["thread_post"], "postaudio")
-                else:
-                    self.call_tts(
-                        "postaudio", process_text(self.reddit_object["thread_post"])
-                    )
-            elif settings.config["settings"]["storymodemethod"] == 1:
-                for idx, text in track(enumerate(self.reddit_object["thread_post"])):
-                    self.call_tts(f"postaudio-{idx}", process_text(text))
+        for idx, comment in track(
+            enumerate(self.reddit_object["comments"]), "Saving..."
+        ):
+            # ! Stop creating mp3 files if the length is greater than max length.
+            if self.length > self.max_length and idx > 1:
+                self.length -= self.last_clip_length
+                idx -= 1
+                break
 
-        else:
-            for idx, comment in track(
-                enumerate(self.reddit_object["comments"]), "Saving..."
-            ):
-                # ! Stop creating mp3 files if the length is greater than max length.
-                if self.length > self.max_length and idx > 1:
-                    self.length -= self.last_clip_length
-                    idx -= 1
-                    break
+            if (
+                len(comment["comment_body"]) > self.tts_module.max_chars
+            ):  # Split the comment if it is too long
+                self.split_post(comment["comment_body"], idx)  # Split the comment
+            else:  # If the comment is not too long, just call the tts engine
+                self.call_tts(f"{idx}", process_text(comment["comment_body"]))
 
-                if (
-                    len(comment["comment_body"]) > self.tts_module.max_chars
-                ):  # Split the comment if it is too long
-                    self.split_post(comment["comment_body"], idx)  # Split the comment
-                else:  # If the comment is not too long, just call the tts engine
-                    self.call_tts(f"{idx}", process_text(comment["comment_body"]))
+            counter += 1
 
         print_substep("Saved Text to MP3 files successfully.", style="bold green")
-        return self.length, idx
+        return self.length, counter
 
     def split_post(self, text: str, idx):
         split_files = []

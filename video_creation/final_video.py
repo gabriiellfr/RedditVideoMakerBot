@@ -178,7 +178,7 @@ def make_final_video(
     image_clips.insert(
         0,
         ffmpeg.input(f"assets/temp/{reddit_id}/png/title.png")["v"].filter(
-            "scale", screenshot_width, -1
+            "scale", 1000, -1
         ),
     )
 
@@ -189,7 +189,7 @@ def make_final_video(
         image_clips.append(
             ffmpeg.input(f"assets/temp/{reddit_id}/png/comment_{i}.png")[
                 "v"
-            ].filter("scale", screenshot_width, -1)
+            ].filter("scale", 1000, -1)
         )
         background_clip = background_clip.overlay(
             image_clips[i],
@@ -234,8 +234,6 @@ def make_final_video(
     path = f"results/{subreddit}/{filename}"
     path = path[:251]
     path = path + ".mp4"
-
-    print(path)
 
     with ProgressFfmpeg(length, on_update_example) as progress:
         ffmpeg.output(
