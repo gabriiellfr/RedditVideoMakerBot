@@ -4,11 +4,10 @@ import re
 from pathlib import Path
 from random import randrange
 from typing import Any, Tuple
+import subprocess
 
 from moviepy.editor import VideoFileClip
 from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
-from pytube import YouTube
-from pytube.cli import on_progress
 from utils import settings
 from utils.console import print_step, print_substep
 
@@ -20,7 +19,6 @@ with open("./utils/backgrounds.json") as json_file:
 background_options.pop("__comment", None)
 
 # Add position lambda function
-# (https://zulko.github.io/moviepy/ref/VideoClip/VideoClip.html#moviepy.video.VideoClip.VideoClip.set_position)
 for name in list(background_options.keys()):
     pos = background_options[name][3]
 
@@ -63,19 +61,22 @@ def get_background_config():
 def download_background(background_config: Tuple[str, str, str, Any]):
     """Downloads the background/s video from YouTube."""
     Path("./assets/backgrounds/").mkdir(parents=True, exist_ok=True)
-    # note: make sure the file name doesn't include an - in it
     uri, filename, credit, _ = background_config
-    if Path(f"assets/backgrounds/{credit}-{filename}").is_file():
+    output_path = f"assets/backgrounds/{filename}"
+    
+    if Path(output_path).is_file():
         return
-    print_step(
-        "We need to download the backgrounds videos. they are fairly large but it's only done once. 😎"
-    )
+    
+    print_step("We need to download the backgrounds videos. They are fairly large but it's only done once. 😎")
     print_substep("Downloading the backgrounds videos... please be patient 🙏 ")
     print_substep(f"Downloading {filename} from {uri}")
-    YouTube(uri, on_progress_callback=on_progress).streams.filter(
-        res="1080p"
-    ).first().download("assets/backgrounds", filename=f"{credit}-{filename}")
+    
+    # Use youtube-dl to download the video
+    subprocess.run(["yt-dlp", "-f", "bestvideo", "-o", output_path, uri])
+
+    
     print_substep("Background video downloaded successfully! 🎉", style="bold green")
+
 
 
 def chop_background_video(
@@ -89,11 +90,14 @@ def chop_background_video(
     """
 
     print_step("Finding a spot in the backgrounds video to chop...✂️")
-    choice = f"{background_config[2]}-{background_config[1]}"
+    choice = background_config[1]
     id = re.sub(r"[^\w\s-]", "", reddit_object["thread_id"])
     background = VideoFileClip(f"assets/backgrounds/{choice}")
 
     start_time, end_time = get_start_and_end_times(video_length, background.duration)
+
+    print(start_time, end_time, background.duration, video_length)
+
     try:
         ffmpeg_extract_subclip(
             f"assets/backgrounds/{choice}",
