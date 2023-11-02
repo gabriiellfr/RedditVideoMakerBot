@@ -72,7 +72,7 @@ def download_background(background_config: Tuple[str, str, str, Any]):
     print_substep(f"Downloading {filename} from {uri}")
     
     # Use youtube-dl to download the video
-    subprocess.run(["yt-dlp", "-f", "bestvideo", "-o", output_path, uri])
+    subprocess.run(["yt-dlp", "-f", "best", "-o", output_path, uri])
 
     
     print_substep("Background video downloaded successfully! 🎉", style="bold green")
@@ -95,8 +95,6 @@ def chop_background_video(
     background = VideoFileClip(f"assets/backgrounds/{choice}")
 
     start_time, end_time = get_start_and_end_times(video_length, background.duration)
-
-    print(start_time, end_time, background.duration, video_length)
 
     try:
         ffmpeg_extract_subclip(

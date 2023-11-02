@@ -123,10 +123,6 @@ def make_final_video(
     reddit_obj: dict,
     background_config: Tuple[str, str, str, Any],
 ):
-    
-    print(number_of_clips, length, "number_of_clips, length")
-
-
     """Gathers audio clips, gathers all screenshots, stitches them together and saves the final video to assets/temp
     Args:
         number_of_clips (int): Index to end at when going through the screenshots'
@@ -170,22 +166,26 @@ def make_final_video(
 
     console.log(f"[bold green] Video Will Be: {length} Seconds Long")
 
-    screenshot_width = int((W * 45) // 100)
+    screenshot_width = int((W * 35) // 100)
+    screenshot_pos = 40
+
     audio = ffmpeg.input(f"assets/temp/{reddit_id}/audio.mp3")
+
+    print(screenshot_width, "screenshot_width", (W * 45), W)
 
     image_clips = list()
 
     image_clips.insert(
         0,
         ffmpeg.input(f"assets/temp/{reddit_id}/png/title.png")["v"].filter(
-            "scale", 1000, -1
+            "scale", screenshot_width, -1
         ),
     )
     background_clip = background_clip.overlay(
         image_clips[0],
         enable=f"between(t,{0},{0 + audio_clips_durations[0]})",
         x="(main_w-overlay_w)/2",
-        y="(main_h-overlay_h)/2",
+        y=f"(main_h-overlay_h)*({screenshot_pos} / 100)",
     )
 
     current_time = audio_clips_durations[0]
@@ -195,13 +195,13 @@ def make_final_video(
         image_clips.append(
             ffmpeg.input(f"assets/temp/{reddit_id}/png/comment_{i}.png")[
                 "v"
-            ].filter("scale", 1000, -1)
+            ].filter("scale", screenshot_width, -1)
         )
         background_clip = background_clip.overlay(
             image_clips[i + 1],
             enable=f"between(t,{current_time},{current_time + audio_clips_durations[i + 1]})",
             x="(main_w-overlay_w)/2",
-            y="(main_h-overlay_h)/2",
+            y=f"(main_h-overlay_h)*({screenshot_pos} / 100)",
         )
         current_time += audio_clips_durations[i + 1]
 
@@ -220,7 +220,7 @@ def make_final_video(
     background_clip = ffmpeg.drawtext(
         background_clip,
         text=text,
-        x=f"(w-text_w)",
+        x=f"(w-text_w) - 10",
         y=f"(h-text_h)",
         fontsize=12,
         fontcolor="White",

@@ -84,9 +84,6 @@ class TTSEngine:
             else:  # If the comment is not too long, just call the tts engine
                 self.call_tts(f"{idx}", process_text(comment["comment_body"]))
 
-
-            print(self.length)
-
             counter += 1
 
         print_substep("Saved Text to MP3 files successfully.", style="bold green")
