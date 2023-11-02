@@ -80,8 +80,39 @@ def name_normalize(name: str) -> str:
         return name
 
 
-def prepare_background(reddit_id: str, W: int, H: int) -> str:
+def prepare_background(reddit_id: str, W: int, H: int, length: int) -> str:
+    from tqdm import tqdm
+
+    pbar = tqdm(total=100, desc="Progress: ", bar_format="{l_bar}{bar}", unit=" %")
+
+    def on_update_example(progress):
+        status = round(progress * 100, 2)
+        old_percentage = pbar.n
+        pbar.update(status - old_percentage)
+
     output_path = f"assets/temp/{reddit_id}/background_noaudio.mp4"
+
+    try:
+        with ProgressFfmpeg(length, on_update_example) as progress:
+            ffmpeg.input(f"assets/temp/{reddit_id}/background.mp4").filter("crop", f"ih*({W}/{H})", "ih").output(
+                output_path,
+                an=None,
+                **{
+                    "c:v": "h264",
+                    "b:v": "20M",
+                    "b:a": "192k",
+                    "threads": multiprocessing.cpu_count(),
+                },
+            ).overwrite_output().global_args("-progress", progress.output_file.name).run(
+                quiet=True,
+            )
+        
+        old_percentage = pbar.n
+        pbar.update(100 - old_percentage)
+        pbar.close()
+    except Exception as e:
+        print(e)
+        exit()
 
     return output_path
 
@@ -92,6 +123,10 @@ def make_final_video(
     reddit_obj: dict,
     background_config: Tuple[str, str, str, Any],
 ):
+    
+    print(number_of_clips, length, "number_of_clips, length")
+
+
     """Gathers audio clips, gathers all screenshots, stitches them together and saves the final video to assets/temp
     Args:
         number_of_clips (int): Index to end at when going through the screenshots'
@@ -106,7 +141,7 @@ def make_final_video(
     reddit_id = re.sub(r"[^\w\s-]", "", reddit_obj["thread_id"])
     print_step("Creating the final video 🎥")
 
-    background_clip = ffmpeg.input(prepare_background(reddit_id, W=W, H=H))
+    background_clip = ffmpeg.input(prepare_background(reddit_id, W=W, H=H, length=length))
 
     # Gather all audio clips
     audio_clips = list()
@@ -128,6 +163,11 @@ def make_final_video(
     audio_file_path = f"assets/temp/{reddit_id}/mp3/title.mp3"
     audio_clips_durations.insert(0, MP3(audio_file_path).info.length)
 
+    audio_concat = ffmpeg.concat(*audio_clips, a=1, v=0)
+    ffmpeg.output(
+        audio_concat, f"assets/temp/{reddit_id}/audio.mp3", **{"b:a": "192k"}
+    ).overwrite_output().run(quiet=True)
+
     console.log(f"[bold green] Video Will Be: {length} Seconds Long")
 
     screenshot_width = int((W * 45) // 100)
@@ -145,8 +185,6 @@ def make_final_video(
     current_time = 0
 
     for i in range(0, number_of_clips):
-
-        print(i, "HERE", number_of_clips)
 
         image_clips.append(
             ffmpeg.input(f"assets/temp/{reddit_id}/png/comment_{i}.png")[
@@ -222,4 +260,9 @@ def make_final_video(
     pbar.update(100 - old_percentage)
     pbar.close()
 
+    save_data(subreddit, filename + ".mp4", title, idx, background_config[2])
+    print_step("Removing temporary files 🗑")
+    cleanups = cleanup(reddit_id)
+    print_substep(f"Removed {cleanups} temporary files 🗑")
     print_step("Done! 🎉 The video is in the results folder 📁")
+    
