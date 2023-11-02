@@ -166,7 +166,7 @@ def make_final_video(
 
     console.log(f"[bold green] Video Will Be: {length} Seconds Long")
 
-    screenshot_width = int((W * 90) / 100)
+    screenshot_width = int((W * 35) // 100)
     screenshot_pos = 40
 
     audio = ffmpeg.input(f"assets/temp/{reddit_id}/audio.mp3")
@@ -220,7 +220,7 @@ def make_final_video(
         text=text,
         x=f"(w-text_w) - 10",
         y=f"(h-text_h)",
-        fontsize=30,
+        fontsize=12,
         fontcolor="White",
         fontfile=os.path.join("fonts", "Roboto-Regular.ttf"),
     )
