@@ -181,8 +181,14 @@ def make_final_video(
             "scale", 1000, -1
         ),
     )
+    background_clip = background_clip.overlay(
+        image_clips[0],
+        enable=f"between(t,{0},{0 + audio_clips_durations[0]})",
+        x="(main_w-overlay_w)/2",
+        y="(main_h-overlay_h)/2",
+    )
 
-    current_time = 0
+    current_time = audio_clips_durations[0]
 
     for i in range(0, number_of_clips):
 
@@ -192,12 +198,12 @@ def make_final_video(
             ].filter("scale", 1000, -1)
         )
         background_clip = background_clip.overlay(
-            image_clips[i],
-            enable=f"between(t,{current_time},{current_time + audio_clips_durations[i]})",
+            image_clips[i + 1],
+            enable=f"between(t,{current_time},{current_time + audio_clips_durations[i + 1]})",
             x="(main_w-overlay_w)/2",
             y="(main_h-overlay_h)/2",
         )
-        current_time += audio_clips_durations[i]
+        current_time += audio_clips_durations[i + 1]
 
     title = re.sub(r"[^\w\s-]", "", reddit_obj["thread_title"])
     idx = re.sub(r"[^\w\s-]", "", reddit_obj["thread_id"])

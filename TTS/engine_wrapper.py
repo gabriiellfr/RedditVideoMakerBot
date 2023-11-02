@@ -74,7 +74,6 @@ class TTSEngine:
         ):
             # ! Stop creating mp3 files if the length is greater than max length.
             if self.length > self.max_length and idx > 1:
-                self.length -= self.last_clip_length
                 idx -= 1
                 break
 
@@ -84,6 +83,9 @@ class TTSEngine:
                 self.split_post(comment["comment_body"], idx)  # Split the comment
             else:  # If the comment is not too long, just call the tts engine
                 self.call_tts(f"{idx}", process_text(comment["comment_body"]))
+
+
+            print(self.length)
 
             counter += 1
 

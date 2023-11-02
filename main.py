@@ -61,10 +61,8 @@ if __name__ == "__main__":
     config is False and exit()
     
     try:
-        main()
-        print("TCHAU...")
-        shutdown()
-        exit()
+        while(True):
+            main()
 
     except KeyboardInterrupt:
         shutdown()
@@ -82,4 +80,6 @@ if __name__ == "__main__":
             f"Error: {err} \n"
             f'Config: {config["settings"]}'
         )
-        raise err
+        main()
+    
+        
