@@ -4,6 +4,7 @@ from os.path import exists
 from utils import settings
 from utils.console import print_substep
 from utils.ai_methods import sort_by_similarity
+from utils.videos import save_data
 
 
 def get_subreddit_undone(
@@ -51,13 +52,19 @@ def get_subreddit_undone(
         if (
             submission.num_comments
             <= int(settings.config["reddit"]["thread"]["min_comments"])
-            and not settings.config["settings"]["storymode"]
         ):
-            print_substep(
-                f'This post has under the specified minimum of comments ({settings.config["reddit"]["thread"]["min_comments"]}). Skipping...'
-            )
-            continue
+            if(submission.score <= int(settings.config["reddit"]["thread"]["min_score"])):
+                print_substep(f'This post has under the specified minimum of comments ({settings.config["reddit"]["thread"]["min_comments"]}) or {int(settings.config["reddit"]["thread"]["min_score"])} score. Skipping...')
+                continue
+
         if settings.config["settings"]["storymode"] and not submission.is_self:
+            continue
+        if not submission.selftext:
+            save_data(f"r/{submission.subreddit}", "", submission.title, str(submission), "", "skipped. selftext is empty.")
+            print_substep(
+                "Skipping...",
+                "red",
+            )
             continue
         if similarity_scores is not None:
             return submission, similarity_scores[i].item()

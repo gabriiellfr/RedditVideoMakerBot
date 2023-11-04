@@ -262,7 +262,7 @@ def make_final_video(
     pbar.update(100 - old_percentage)
     pbar.close()
 
-    save_data(subreddit, filename + ".mp4", title, idx, background_config[2])
+    save_data(subreddit, filename + ".mp4", title, idx, background_config[2], "Done! The video is in the results folder")
     print_step("Removing temporary files 🗑")
     cleanups = cleanup(reddit_id)
     print_substep(f"Removed {cleanups} temporary files 🗑")

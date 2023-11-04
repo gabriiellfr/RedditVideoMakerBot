@@ -160,10 +160,10 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
             )
 
             if resp.casefold().startswith("y"):
-                save_data("", "", "skipped", reddit_id, "")
+                save_data(reddit_object["subreddit"], "", reddit_object["thread_title"], reddit_id, "", "skipped. error when download screenshots")
                 print_substep(
-                    "The post is successfully skipped! You can now restart the program and this post will skipped.",
-                    "green",
+                    "Skipping.",
+                    "red",
                 )
 
             raise e

@@ -138,6 +138,7 @@ def make_final_video(
     print_step("Creating the final video 🎥")
 
     background_clip = ffmpeg.input(prepare_background(reddit_id, W=W, H=H, length=length))
+    #background_clip = ffmpeg.input(f"assets/temp/{reddit_id}/background_noaudio.mp4")
 
     # Gather all audio clips
     audio_clips = list()
@@ -166,7 +167,8 @@ def make_final_video(
 
     console.log(f"[bold green] Video Will Be: {length} Seconds Long")
 
-    screenshot_width = int((W * 90) / 100)
+    #screenshot_width = int((W * 35) / 100)
+    screenshot_width = int((W * 90) / 100) #VALUE FOR 4k BG VIDEO
     screenshot_pos = 40
 
     audio = ffmpeg.input(f"assets/temp/{reddit_id}/audio.mp3")
@@ -220,7 +222,8 @@ def make_final_video(
         text=text,
         x=f"(w-text_w) - 10",
         y=f"(h-text_h)",
-        fontsize=30,
+        #fontsize=12,
+        fontsize=30, #VALUE FOR 4k BG VIDEO
         fontcolor="White",
         fontfile=os.path.join("fonts", "Roboto-Regular.ttf"),
     )
@@ -262,7 +265,7 @@ def make_final_video(
     pbar.update(100 - old_percentage)
     pbar.close()
 
-    save_data(subreddit, filename + ".mp4", title, idx, background_config[2])
+    save_data(subreddit, filename + ".mp4", title, idx, background_config[2], "Done! The video is in the results folder")
     print_step("Removing temporary files 🗑")
     cleanups = cleanup(reddit_id)
     print_substep(f"Removed {cleanups} temporary files 🗑")

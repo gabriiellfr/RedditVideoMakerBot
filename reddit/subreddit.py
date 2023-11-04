@@ -23,17 +23,10 @@ def get_subreddit_threads(POST_ID: str):
     print_substep("Logging into Reddit.")
 
     content = {}
-    if settings.config["reddit"]["creds"]["2fa"]:
-        print(
-            "\nEnter your two-factor authentication code from your authenticator app.\n"
-        )
-        code = input("> ")
-        print()
-        pw = settings.config["reddit"]["creds"]["password"]
-        passkey = f"{pw}:{code}"
-    else:
-        passkey = settings.config["reddit"]["creds"]["password"]
+
+    passkey = settings.config["reddit"]["creds"]["password"]
     username = settings.config["reddit"]["creds"]["username"]
+
     if str(username).casefold().startswith("u/"):
         username = username[2:]
     try:
@@ -53,7 +46,7 @@ def get_subreddit_threads(POST_ID: str):
 
     # Ask user for subreddit input
     print_step("Getting subreddit threads...")
-    similarity_score = 0
+    
     if not settings.config["reddit"]["thread"][
         "subreddit"
     ]:  # note to user. you can have multiple subreddits via reddit.subreddit("redditdev+learnpython")
@@ -79,27 +72,6 @@ def get_subreddit_threads(POST_ID: str):
 
     if POST_ID:  # would only be called if there are multiple queued posts
         submission = reddit.submission(id=POST_ID)
-
-    elif (
-        settings.config["reddit"]["thread"]["post_id"]
-        and len(str(settings.config["reddit"]["thread"]["post_id"]).split("+")) == 1
-    ):
-        submission = reddit.submission(
-            id=settings.config["reddit"]["thread"]["post_id"]
-        )
-    elif settings.config["ai"][
-        "ai_similarity_enabled"
-    ]:  # ai sorting based on comparison
-        threads = subreddit.hot(limit=50)
-        keywords = settings.config["ai"]["ai_similarity_keywords"].split(",")
-        keywords = [keyword.strip() for keyword in keywords]
-        # Reformat the keywords for printing
-        keywords_print = ", ".join(keywords)
-        print(f"Sorting threads by similarity to the given keywords: {keywords_print}")
-        threads, similarity_scores = sort_by_similarity(threads, keywords)
-        submission, similarity_score = get_subreddit_undone(
-            threads, subreddit, similarity_scores=similarity_scores
-        )
     else:
         threads = subreddit.hot(limit=25)
         submission = get_subreddit_undone(threads, subreddit)
@@ -107,24 +79,14 @@ def get_subreddit_threads(POST_ID: str):
     if submission is None:
         return get_subreddit_threads(POST_ID)  # submission already done. rerun
 
-    if settings.config["settings"]["storymode"]:
-        if not submission.selftext:
-            print_substep("You are trying to use story mode on post with no post text")
-            exit()
-        else:
-            # Check for the length of the post text
-            if len(submission.selftext) > (
-                settings.config["settings"]["storymode_max_length"] or 2000
-            ):
-                print_substep(
-                    f"Post is too long ({len(submission.selftext)}), try with a different post. ({settings.config['settings']['storymode_max_length']} character limit)"
-                )
-                exit()
-    elif not submission.num_comments:
+    if not submission.num_comments:
         print_substep("No comments found. Skipping.")
         exit()
 
     submission = check_done(submission)  # double-checking
+
+    if submission is None:
+        return get_subreddit_threads(POST_ID)
 
     upvotes = submission.score
     ratio = submission.upvote_ratio * 100
@@ -136,50 +98,42 @@ def get_subreddit_threads(POST_ID: str):
     print_substep(f"Thread has {upvotes} upvotes", style="bold blue")
     print_substep(f"Thread has a upvote ratio of {ratio}%", style="bold blue")
     print_substep(f"Thread has {num_comments} comments", style="bold blue")
-    if similarity_score:
-        print_substep(
-            f"Thread has a similarity score up to {round(similarity_score * 100)}%",
-            style="bold blue",
-        )
 
+    content["subreddit"] = f"r/{sub}"
     content["thread_url"] = threadurl
     content["thread_title"] = submission.title
+    content["thread_selftext"] = submission.selftext
     content["thread_id"] = submission.id
     content["is_nsfw"] = submission.over_18
     content["comments"] = []
-    if settings.config["settings"]["storymode"]:
-        if settings.config["settings"]["storymodemethod"] == 1:
-            content["thread_post"] = posttextparser(submission.selftext)
-        else:
-            content["thread_post"] = submission.selftext
-    else:
-        for top_level_comment in submission.comments:
-            if isinstance(top_level_comment, MoreComments):
-                continue
 
-            if top_level_comment.body in ["[removed]", "[deleted]"]:
-                continue  # # see https://github.com/JasonLovesDoggo/RedditVideoMakerBot/issues/78
-            if not top_level_comment.stickied:
-                sanitised = sanitize_text(top_level_comment.body)
-                if not sanitised or sanitised == " ":
-                    continue
-                if len(top_level_comment.body) <= int(
-                    settings.config["reddit"]["thread"]["max_comment_length"]
+    for top_level_comment in submission.comments:
+        if isinstance(top_level_comment, MoreComments):
+            continue
+
+        if top_level_comment.body in ["[removed]", "[deleted]"]:
+            continue  # # see https://github.com/JasonLovesDoggo/RedditVideoMakerBot/issues/78
+        if not top_level_comment.stickied:
+            sanitised = sanitize_text(top_level_comment.body)
+            if not sanitised or sanitised == " ":
+                continue
+            if len(top_level_comment.body) <= int(
+                settings.config["reddit"]["thread"]["max_comment_length"]
+            ):
+                if len(top_level_comment.body) >= int(
+                    settings.config["reddit"]["thread"]["min_comment_length"]
                 ):
-                    if len(top_level_comment.body) >= int(
-                        settings.config["reddit"]["thread"]["min_comment_length"]
-                    ):
-                        if (
-                            top_level_comment.author is not None
-                            and sanitize_text(top_level_comment.body) is not None
-                        ):  # if errors occur with this change to if not.
-                            content["comments"].append(
-                                {
-                                    "comment_body": top_level_comment.body,
-                                    "comment_url": top_level_comment.permalink,
-                                    "comment_id": top_level_comment.id,
-                                }
-                            )
+                    if (
+                        top_level_comment.author is not None
+                        and sanitize_text(top_level_comment.body) is not None
+                    ):  # if errors occur with this change to if not.
+                        content["comments"].append(
+                            {
+                                "comment_body": top_level_comment.body,
+                                "comment_url": top_level_comment.permalink,
+                                "comment_id": top_level_comment.id,
+                            }
+                        )
 
     print_substep("Received subreddit threads Successfully.", style="bold green")
     return content

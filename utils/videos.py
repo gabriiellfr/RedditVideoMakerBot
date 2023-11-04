@@ -32,11 +32,15 @@ def check_done(
                 return redditobj
             print_step("Getting new post as the current one has already been done")
             return None
+        
+    if not redditobj.selftext:
+        return None
+
     return redditobj
 
 
 def save_data(
-    subreddit: str, filename: str, reddit_title: str, reddit_id: str, credit: str
+    subreddit: str, filename: str, reddit_title: str, reddit_id: str, credit: str, info: str
 ):
     """Saves the videos that have already been generated to a JSON file in video_creation/data/videos.json
 
@@ -58,6 +62,7 @@ def save_data(
             "background_credit": credit,
             "reddit_title": reddit_title,
             "filename": filename,
+            "info": info,
         }
         done_vids.append(payload)
         raw_vids.seek(0)

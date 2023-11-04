@@ -2,6 +2,7 @@ import os
 import re
 from pathlib import Path
 from typing import Tuple
+from mutagen.mp3 import MP3
 
 # import sox
 # from mutagen import MutagenError
@@ -15,6 +16,7 @@ from rich.progress import track
 
 from utils import settings
 from utils.console import print_step, print_substep
+from utils.videos import save_data
 from utils.voice import sanitize_text
 
 DEFAULT_MAX_LENGTH: int = 50  # video length variable
@@ -64,11 +66,36 @@ class TTSEngine:
         print_step("Saving Text to MP3 files...")
 
         self.add_periods()
-        self.call_tts("title", process_text(self.reddit_object["thread_title"]))
+
+        #self.call_tts("title", process_text(self.reddit_object["thread_title"]))
+
+        title_selftext = f"{self.reddit_object['thread_title']}. {self.reddit_object['thread_selftext']}"
+
+        if (
+            len(title_selftext) > 300
+        ):  # Split the comment if it is too long
+            self.split_post(title_selftext, "title")  # Split the comment
+            self.max_length = 90
+
+        else:  # If the comment is not too long, just call the tts engine
+            self.call_tts(f"title", process_text(title_selftext))
+
+        title_file_path = f"assets/temp/{self.redditid}/mp3/title.mp3"
+        title_file_duration = MP3(title_file_path).info.length
+
+        if title_file_duration > 110:
+            save_data(
+                f"r/{self.reddit_object['subreddit']}", "", self.reddit_object['thread_title'], self.redditid, "", "skipped. title is too long")
+            print_substep(
+                "Skipping...",
+                "red",
+            )
+            exit()
+
         # processed_text = ##self.reddit_object["thread_post"] != ""
         idx = None
         counter = 0
-
+        
         for idx, comment in track(
             enumerate(self.reddit_object["comments"]), "Saving..."
         ):
@@ -90,6 +117,8 @@ class TTSEngine:
         return self.length, counter
 
     def split_post(self, text: str, idx):
+        print_step(f"Spliting mp3 files ({idx})...")
+
         split_files = []
         split_text = [
             x.group().strip()
@@ -139,6 +168,7 @@ class TTSEngine:
         try:
             clip = AudioFileClip(f"{self.path}/{filename}.mp3")
             self.last_clip_length = clip.duration
+
             self.length += clip.duration
             clip.close()
         except:
